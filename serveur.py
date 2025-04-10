@@ -1,29 +1,14 @@
 import socket
 import select
 
-
-def print_colored(message, color):
-    colors = {
-        "red": "\033[91m",
-        "green": "\033[92m",
-        "orange": "\033[93m",  # orange est en fait un jaune dans ANSI
-        "reset": "\033[0m"
-    }
-
-    color_code = colors.get(color.lower())
-    if not color_code:
-        print("Couleur non supportée. Utilise 'red', 'green' ou 'orange'.")
-        return
-
-    print(f"{color_code}{message}{colors['reset']}")
 class SecureServerCommunications:
-    def __init__(self, host='172.23.203.6', port=3390):
+    def __init__(self, host='172.23.203.6', port=3391):
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.server_socket.bind((host, port))
         self.server_socket.listen(6)
         self.server_socket.setblocking(False)
-        print("Serveur démarré, en attente de connexions...")
+        print("✅ Serveur démarré, en attente de connexions...")
 
         self.epoll = select.epoll()
         self.epoll.register(self.server_socket.fileno(), select.EPOLLIN)
@@ -39,7 +24,7 @@ class SecureServerCommunications:
                 for fileno, event in events:
                     if fileno == self.server_socket.fileno():
                         client_socket, addr = self.server_socket.accept()
-                        print(f"Nouvelle connexion de {addr}")
+                        print(f"📥 Nouvelle connexion de {addr}")
                         client_socket.setblocking(False)
                         self.epoll.register(client_socket.fileno(), select.EPOLLIN)
                         self.connections[client_socket.fileno()] = client_socket
@@ -88,22 +73,22 @@ class SecureServerCommunications:
                                     if target_fileno and target_fileno in self.connections:
                                         msg_to_send = f"Client {sender_id} -> Vous: {encrypted_msg}"
                                         self.connections[target_fileno].send(msg_to_send.encode())
-                                        print(f"{sender_id} -> {dest_id} ({encrypted_msg})")
+                                        print(f"📨 {sender_id} -> {dest_id} ({encrypted_msg})")
                                     else:
-                                        client_socket.send(f"Client {dest_id} introuvable.\n".encode())
+                                        client_socket.send(f"⚠️ Client {dest_id} introuvable.\n".encode())
                                 except Exception as e:
-                                    client_socket.send(f"Erreur dans le message : {e}\n".encode())
+                                    client_socket.send(f"⚠️ Erreur dans le message : {e}\n".encode())
                             else:
-                                client_socket.send("Format de message invalide. Utilisez 'ID: message'\n".encode())
+                                client_socket.send("⚠️ Format de message invalide. Utilisez 'ID: message'\n".encode())
                         else:
-                            print(f"Client {self.client_ids.get(fileno, '?')} déconnecté")
+                            print(f"❌ Client {self.client_ids.get(fileno, '?')} déconnecté")
                             self.epoll.unregister(fileno)
                             client_socket.close()
                             del self.connections[fileno]
                             if fileno in self.client_ids:
                                 del self.client_ids[fileno]
         except KeyboardInterrupt:
-            print("\nInterruption. Fermeture du serveur...")
+            print("\n🛑 Interruption. Fermeture du serveur...")
         finally:
             self.cleanup()
 
