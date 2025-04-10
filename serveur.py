@@ -24,7 +24,7 @@ class SecureServerCommunications:
                 for fileno, event in events:
                     if fileno == self.server_socket.fileno():
                         client_socket, addr = self.server_socket.accept()
-                        print(f"📥 Nouvelle connexion de {addr}")
+                        print_colored(f"📥 Nouvelle connexion de {addr}","green")
                         client_socket.setblocking(False)
                         self.epoll.register(client_socket.fileno(), select.EPOLLIN)
                         self.connections[client_socket.fileno()] = client_socket
