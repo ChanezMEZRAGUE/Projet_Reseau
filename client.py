@@ -43,7 +43,7 @@ class SecureChatClient:
             print_colored("Connexion réussie au serveur.","green")
             welcome_message = self.client_socket.recv(1024).decode()
             print(f"Serveur : {welcome_message}")
-            print("ℹ️ Tapez 'ID: message' pour envoyer un message ou '/list' pour voir les clients connectés.")
+            print(" Tapez 'ID: message' pour envoyer un message ou '/list' pour voir les clients connectés.")
             threading.Thread(target=self.receive_messages, daemon=True).start()
         except Exception as e:
             print(f" Erreur de connexion : {e}")

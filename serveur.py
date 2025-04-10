@@ -1,8 +1,21 @@
 import socket
 import select
+def print_colored(message, color):
+    colors = {
+        "red": "\033[91m",
+        "green": "\033[38;5;34m",
+        "orange": "\033[93m",  
+        "reset": "\033[0m"
+    }
 
+    color_code = colors.get(color.lower())
+    if not color_code:
+        print("Couleur non supportée. Utilise 'red', 'green' ou 'orange'.")
+        return
+
+    print(f"{color_code}{message}{colors['reset']}")
 class SecureServerCommunications:
-    def __init__(self, host='172.23.203.6', port=3391):
+    def __init__(self, host='172.23.203.6', port=3390):
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.server_socket.bind((host, port))
@@ -20,6 +33,7 @@ class SecureServerCommunications:
     def run(self):
         try:
             while True:
+
                 events = self.epoll.poll(1)
                 for fileno, event in events:
                     if fileno == self.server_socket.fileno():
@@ -34,6 +48,7 @@ class SecureServerCommunications:
                             client_id = self.next_id
                             self.next_id += 1
                             welcome_message = f"Bienvenue sur le serveur de chat ! Votre ID est {client_id}\n"
+                            
                         else:
                             welcome_message = "Serveur plein. Connexion refusée.\n"
                             client_socket.send(welcome_message.encode())
