@@ -22,28 +22,29 @@ def print_colored(message, color):
 
 
 class SecureChatClient:
-    def __init__(self, host='192.168.1.100', port=3390, password='securepassword'):
+    def __init__(self, host='192.168.1.101', port=3390, password='securepassword'):
         self.host = host
         self.port = port
         self.client_socket = None
         self.key = hashlib.sha256(password.encode()).digest()
         self.running = True
         self.connect()
-
+    # cryptage
     def encrypt_message(self, message):
-        cipher = AES.new(self.key, AES.MODE_CBC)
+        cipher = AES.new(self.key, AES.MODE_CBC)    # creation d,un cipher
         ciphertext = cipher.encrypt(pad(message.encode(), AES.block_size))
         return base64.b64encode(cipher.iv + ciphertext).decode()
-
+    # connexion au serveur
     def connect(self):
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             print(f"Tentative de connexion à {self.host}:{self.port} ...")
             self.client_socket.connect((self.host, self.port))
-            print_colored("Connexion réussie au serveur.","green")
+            print_colored("📶 Connexion réussie au serveur.","green")
+            #reponse du serveur 
             welcome_message = self.client_socket.recv(1024).decode()
             print(f"Serveur : {welcome_message}")
-            print(" Tapez 'ID: message' pour envoyer un message ou '/list' pour voir les clients connectés.")
+            print(" Tapez 'ID: message' pour envoyer un message ou '/list' pour voir les clients connectés.\n")
             threading.Thread(target=self.receive_messages, daemon=True).start()
         except Exception as e:
             print(f" Erreur de connexion : {e}")
@@ -60,7 +61,7 @@ class SecureChatClient:
                     elif "-> Vous: " in response:
                         prefix, encrypted_part = response.split("-> Vous: ", 1)
                         decrypted = self.decrypt_message(encrypted_part.strip())
-                        print(f"{prefix}-> Vous: {decrypted}\n", end="", flush=True)
+                        print(f"💬 {prefix}-> Vous: {decrypted}\n", end="", flush=True)
                     elif ": " in response:
                         # Message normal avec ID et contenu chiffré
                         prefix, encrypted_part = response.split(": ", 1)
@@ -98,7 +99,7 @@ class SecureChatClient:
                     self.client_socket.send(message.encode())
                     continue
                 if ':' not in message:
-                    print("Format invalide. Utilisez 'ID: message'")
+                    print("Format invalide ❌. Utilisez 'ID: message'")
                     continue
 
                 recipient_id, msg = message.split(':', 1)

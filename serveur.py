@@ -1,6 +1,8 @@
 import socket
 import select
-def print_colored(message, color):
+
+
+def print_colored(message, color):   #code pour des prints coloré
     colors = {
         "red": "\033[91m",
         "green": "\033[38;5;34m",
@@ -14,16 +16,19 @@ def print_colored(message, color):
         return
 
     print(f"{color_code}{message}{colors['reset']}")
+
+
 class SecureServerCommunications:
+
     def __init__(self, host='172.23.203.6', port=3390):
-        self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  #adresse ipV4 et tcp
+        self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  #reutilisation facile
         self.server_socket.bind((host, port))
         self.server_socket.listen(6)
         self.server_socket.setblocking(False)
-        print("✅ Serveur démarré, en attente de connexions...")
+        print("Serveur démarré, ⌛ en attente de connexions...")
 
-        self.epoll = select.epoll()
+        self.epoll = select.epoll()   # surveille plusieurs sockets pour voir quand ils sont prêts à lire, écrire, etc., sans boucle bloquante
         self.epoll.register(self.server_socket.fileno(), select.EPOLLIN)
 
         self.connections = {}    # fileno -> socket
@@ -34,39 +39,39 @@ class SecureServerCommunications:
         try:
             while True:
 
-                events = self.epoll.poll(1)
-                for fileno, event in events:
-                    if fileno == self.server_socket.fileno():
-                        client_socket, addr = self.server_socket.accept()
-                        print_colored(f"📥 Nouvelle connexion de {addr}","green")
+                events = self.epoll.poll(1)  #ecoute le canal
+                for fileno, event in events:    #fileno=identifiant du soket, event=type event
+                    if fileno == self.server_socket.fileno():    #detecter nouvelle connnex
+                        client_socket, addr = self.server_socket.accept()   #accepter la connex
+                        print_colored(f"📶 Nouvelle connexion de {addr}","green")
                         client_socket.setblocking(False)
                         self.epoll.register(client_socket.fileno(), select.EPOLLIN)
                         self.connections[client_socket.fileno()] = client_socket
-
-                        if self.next_id <= 6:
+                        # attribution d'un id
+                        if self.next_id <= 6:    # dans le cas ou y'a de place
                             self.client_ids[client_socket.fileno()] = self.next_id
                             client_id = self.next_id
                             self.next_id += 1
-                            welcome_message = f"Bienvenue sur le serveur de chat ! Votre ID est {client_id}\n"
+                            welcome_message = f"👋 Bienvenue sur le serveur de chat ! Votre ID est {client_id}\n"
                             
-                        else:
-                            welcome_message = "Serveur plein. Connexion refusée.\n"
+                        else:   #si le serveur est plein
+                            welcome_message = "Serveur plein. Connexion refusée ⛔.\n"
                             client_socket.send(welcome_message.encode())
                             client_socket.close()
                             continue
 
                         client_socket.send(welcome_message.encode())
 
-                    elif event & select.EPOLLIN:
-                        client_socket = self.connections[fileno]
+                    elif event & select.EPOLLIN:    #un cleint a envoyer un message(Lecture)
+                        client_socket = self.connections[fileno]     
                         try:
-                            data = client_socket.recv(1024).decode('utf-8')
+                            data = client_socket.recv(1024).decode('utf-8')    # decoder le message
                         except:
                             data = None
 
                         if data:
                             data = data.strip()
-                            if data == "/list":
+                            if data == "/list":   #compter le nombre d'id
                                 ids = ", ".join(str(cid) for cid in self.client_ids.values())
                                 msg = f"Clients connectés : {ids}\n"
                                 client_socket.send(msg.encode())
@@ -74,21 +79,24 @@ class SecureServerCommunications:
 
                             if ':' in data:
                                 try:
-                                    dest_id_str, encrypted_msg = data.split(':', 1)
+                                    #message sous forme id:message
+                                    dest_id_str, encrypted_msg = data.split(':', 1)  #recuperation de l'id et du message
                                     dest_id = int(dest_id_str.strip())
                                     encrypted_msg = encrypted_msg.strip()
 
-                                    sender_id = self.client_ids.get(fileno, '?')
+                                    sender_id = self.client_ids.get(fileno, '?')   
                                     target_fileno = None
                                     for f, cid in self.client_ids.items():
                                         if cid == dest_id:
                                             target_fileno = f
                                             break
-
+                                    #transmission du message au distinataire
                                     if target_fileno and target_fileno in self.connections:
                                         msg_to_send = f"Client {sender_id} -> Vous: {encrypted_msg}"
                                         self.connections[target_fileno].send(msg_to_send.encode())
-                                        print(f"📨 {sender_id} -> {dest_id} ({encrypted_msg})")
+                                        print("********************************************************")
+                                        print(f"💠 {sender_id} -> {dest_id} ({encrypted_msg} 🔒)")
+                                        
                                     else:
                                         client_socket.send(f"⚠️ Client {dest_id} introuvable.\n".encode())
                                 except Exception as e:
@@ -96,14 +104,14 @@ class SecureServerCommunications:
                             else:
                                 client_socket.send("⚠️ Format de message invalide. Utilisez 'ID: message'\n".encode())
                         else:
-                            print(f"❌ Client {self.client_ids.get(fileno, '?')} déconnecté")
+                            print(f" Client {self.client_ids.get(fileno, '?')} déconnecté")
                             self.epoll.unregister(fileno)
                             client_socket.close()
                             del self.connections[fileno]
                             if fileno in self.client_ids:
                                 del self.client_ids[fileno]
         except KeyboardInterrupt:
-            print("\n🛑 Interruption. Fermeture du serveur...")
+            print("\n Interruption. Fermeture du serveur...")
         finally:
             self.cleanup()
 
